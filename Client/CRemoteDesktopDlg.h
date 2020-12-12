@@ -20,8 +20,8 @@ public:
 	DWORD m_dwTargetIp;
 	SOCKET m_desktopSocket;
 	SOCKET m_cmdSocket;
+	HANDLE m_hDesktopThread;
 
-	bool Init();
 	static DWORD WINAPI DesktopThreadProc(LPVOID lpThreadParameter);
 	void ShowScreen(char* pBits, int nWidth, int nHeight);
 	void SendMouseCmd(int nCmd, CPoint point);
@@ -37,7 +37,8 @@ public:
 	afx_msg void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
 	afx_msg void OnKeyUp(UINT nChar, UINT nRepCnt, UINT nFlags);
 	afx_msg BOOL OnMouseWheel(UINT nFlags, short zDelta, CPoint pt);
-	virtual void PostNcDestroy();
 	afx_msg void OnMButtonDown(UINT nFlags, CPoint point);
 	afx_msg void OnMButtonUp(UINT nFlags, CPoint point);
+	virtual void OnOK();
+	afx_msg void OnClose();
 };

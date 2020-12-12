@@ -74,21 +74,25 @@ HCURSOR CClientDlg::OnQueryDragIcon()
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
+DWORD WINAPI RemoteDesktopThreadProc(LPVOID lpParam)
+{
+	CRemoteDesktopDlg dlg((DWORD)lpParam);
+	if (dlg.DoModal() < 0)
+	{
+		AfxMessageBox("远程桌面连接失败");
+	}
+	return 0;
+}
+
 // 远程桌面控制
 void CClientDlg::OnBnClickedButtonRemoteDesktop()
 {
 	UpdateData(TRUE);
-
-	CRemoteDesktopDlg* pRemoteDesktopDlg = new CRemoteDesktopDlg(m_dwTargetIp);
-	if (!pRemoteDesktopDlg->Init())
+	if (NULL == CreateThread(0, 0, RemoteDesktopThreadProc, (LPVOID)m_dwTargetIp, 0, 0))
 	{
-		delete pRemoteDesktopDlg;
-		return;
+		PrintErrMsg("CreateThread");
+		AfxMessageBox("远程桌面连接失败");
 	}
-
-	pRemoteDesktopDlg->Create(IDD_DIALOG_REMOTE_DESKTOP);
-	//pRemoteDesktopDlg->SetParent(GetDesktopWindow());
-	//pRemoteDesktopDlg->ShowWindow(SW_SHOWNORMAL);
 }
 
 // 远程命令行控制
@@ -108,18 +112,23 @@ void CClientDlg::OnBnClickedButtonRemoteCmd()
 	}
 }
 
+DWORD WINAPI RemoteFileThreadProc(LPVOID lpParam)
+{
+	CRemoteFileDlg dlg((DWORD)lpParam);
+	if (dlg.DoModal() < 0)
+	{
+		AfxMessageBox("远程文件连接失败");
+	}
+	return 0;
+}
+
 // 远程文件
 void CClientDlg::OnBnClickedButtonRemoteFile()
 {
 	UpdateData(TRUE);
-
-	CRemoteFileDlg* pRemoteFileDlg = new CRemoteFileDlg(m_dwTargetIp);
-	if (!pRemoteFileDlg->m_bInitSuccess)
+	if (NULL == CreateThread(0, 0, RemoteFileThreadProc, (LPVOID)m_dwTargetIp, 0, 0))
 	{
-		delete pRemoteFileDlg;
-		return;
+		PrintErrMsg("CreateThread");
+		AfxMessageBox("远程桌面连接失败");
 	}
-
-	pRemoteFileDlg->Create(IDD_DIALOG_REMOTE_FILE);
-	pRemoteFileDlg->ShowWindow(SW_SHOWNORMAL);
 }

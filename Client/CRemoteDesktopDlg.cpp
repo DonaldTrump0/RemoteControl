@@ -17,8 +17,6 @@ CRemoteDesktopDlg::CRemoteDesktopDlg(DWORD dwTargetIp, CWnd* pParent /*=nullptr*
 
 CRemoteDesktopDlg::~CRemoteDesktopDlg()
 {
-	closesocket(m_desktopSocket);
-	closesocket(m_cmdSocket);
 }
 
 void CRemoteDesktopDlg::DoDataExchange(CDataExchange* pDX)
@@ -38,32 +36,8 @@ BEGIN_MESSAGE_MAP(CRemoteDesktopDlg, CDialogEx)
 	ON_WM_MOUSEWHEEL()
 	ON_WM_MBUTTONDOWN()
 	ON_WM_MBUTTONUP()
+	ON_WM_CLOSE()
 END_MESSAGE_MAP()
-
-bool CRemoteDesktopDlg::Init()
-{
-	// 连接
-	m_desktopSocket = ConnectTargetHost(m_dwTargetIp);
-	if (INVALID_SOCKET == m_desktopSocket)
-	{
-		return false;
-	}
-
-	// 发送指令
-	if (!SendInt(m_desktopSocket, REMOTE_DESKTOP))
-	{
-		return false;
-	}
-
-	// 再建立一条连接传输鼠标键盘命令
-	m_cmdSocket = ConnectTargetHost(m_dwTargetIp);
-	if (INVALID_SOCKET == m_cmdSocket)
-	{
-		return false;
-	}
-
-	return true;
-}
 
 // 接收远程桌面
 DWORD WINAPI CRemoteDesktopDlg::DesktopThreadProc(LPVOID lpThreadParameter)
@@ -85,7 +59,7 @@ DWORD WINAPI CRemoteDesktopDlg::DesktopThreadProc(LPVOID lpThreadParameter)
 
 	int nNumberOfBytes = nWidth * nHeight * sizeof(COLORREF);
 	char* pBytes = new char[nNumberOfBytes];
-	char* pCompressedData = new char[nNumberOfBytes / 10];
+	char* pCompressedData = new char[nNumberOfBytes];
 	unique_ptr<char> upBytes(pBytes);
 	unique_ptr<char> upCompressedData(pCompressedData);
 
@@ -93,20 +67,9 @@ DWORD WINAPI CRemoteDesktopDlg::DesktopThreadProc(LPVOID lpThreadParameter)
 	{
 		// 接收桌面图片
 		int nCompressedDataSize = 0;
-		if (!RecvInt(s, nCompressedDataSize))
+		if (!RecvData(s, pCompressedData, nCompressedDataSize))
 		{
 			return 0;
-		}
-
-		int nRecvBytes = 0;
-		while (nRecvBytes < nCompressedDataSize)
-		{
-			int nRet = recv(s, pCompressedData + nRecvBytes, nCompressedDataSize - nRecvBytes, 0);
-			if (nRet <= 0)
-			{
-				return 0;
-			}
-			nRecvBytes += nRet;
 		}
 
 		// 解压缩
@@ -116,7 +79,7 @@ DWORD WINAPI CRemoteDesktopDlg::DesktopThreadProc(LPVOID lpThreadParameter)
 			return 0;
 		}
 
-		// 显示
+		// 显示桌面
 		pRemoteDesktopDlg->ShowScreen(pBytes, nWidth, nHeight);
 	}
 
@@ -127,10 +90,8 @@ DWORD WINAPI CRemoteDesktopDlg::DesktopThreadProc(LPVOID lpThreadParameter)
 void CRemoteDesktopDlg::ShowScreen(char* pBits, int nWidth, int nHeight)
 {
 	CDC* pDC = GetDC();
-
 	CDC MemDC;
 	MemDC.CreateCompatibleDC(pDC);
-
 	CBitmap bitmap;
 	bitmap.CreateCompatibleBitmap(pDC, nWidth, nHeight);
 	bitmap.SetBitmapBits(nWidth * nHeight * sizeof(COLORREF), pBits);
@@ -183,11 +144,39 @@ BOOL CRemoteDesktopDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 
+	// 连接
+	m_desktopSocket = ConnectTargetHost(m_dwTargetIp);
+	if (INVALID_SOCKET == m_desktopSocket)
+	{
+		EndDialog(-1);
+		return true;
+	}
+
+	// 发送指令
+	if (!SendInt(m_desktopSocket, REMOTE_DESKTOP))
+	{
+		EndDialog(-1);
+		return true;
+	}
+
+	// 再建立一条连接传输鼠标键盘命令
+	m_cmdSocket = ConnectTargetHost(m_dwTargetIp);
+	if (INVALID_SOCKET == m_cmdSocket)
+	{
+		EndDialog(-1);
+		return true;
+	}
+
 	// 最大化显示窗口
 	ShowWindow(SW_MAXIMIZE);
 
-	// 桌面传输线程
-	CreateThread(0, 0, DesktopThreadProc, this, 0, 0);
+	// 创建桌面传输线程
+	m_hDesktopThread == CreateThread(0, 0, DesktopThreadProc, this, 0, 0);
+	if (NULL == m_hDesktopThread)
+	{
+		EndDialog(-1);
+		return true;
+	}
 
 	return TRUE;
 }
@@ -260,13 +249,6 @@ BOOL CRemoteDesktopDlg::OnMouseWheel(UINT nFlags, short zDelta, CPoint pt)
 }
 
 
-void CRemoteDesktopDlg::PostNcDestroy()
-{
-	CDialogEx::PostNcDestroy();
-	delete this;
-}
-
-
 void CRemoteDesktopDlg::OnMButtonDown(UINT nFlags, CPoint point)
 {
 	SendMouseCmd(MID_BUTTON_DOWN, point);
@@ -278,4 +260,19 @@ void CRemoteDesktopDlg::OnMButtonUp(UINT nFlags, CPoint point)
 {
 	SendMouseCmd(MID_BUTTON_UP, point);
 	CDialogEx::OnMButtonUp(nFlags, point);
+}
+
+
+void CRemoteDesktopDlg::OnOK()
+{
+}
+
+
+void CRemoteDesktopDlg::OnClose()
+{
+	TerminateThread(m_hDesktopThread, 0);
+	closesocket(m_desktopSocket);
+	closesocket(m_cmdSocket);
+
+	CDialogEx::OnClose();
 }

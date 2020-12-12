@@ -12,6 +12,7 @@ void PrintErrMsg(const char* szPreMsg)
     FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM, 0, GetLastError(), 0, szErrMsg, sizeof(szErrMsg), 0);
     sprintf(buf, "%s: %s\r\n", szPreMsg, szErrMsg);
     OutputDebugString(buf);
+	printf("%s", buf);
 }
 
 SOCKET ConnectTargetHost(DWORD dwTargetIp)
@@ -83,7 +84,12 @@ bool RecvData(SOCKET s, char*& pBuf, int& nLen)
 		return true;
 	}
 
-	pBuf = new char[nLen];
+	bool bNew = false;
+	if (NULL == pBuf)
+	{
+		bNew = true;
+		pBuf = new char[nLen];
+	}
 
 	// 接收数据
 	int nRecvBytes = 0;
@@ -93,7 +99,10 @@ bool RecvData(SOCKET s, char*& pBuf, int& nLen)
 		if (nRet <= 0)
 		{
 			PrintErrMsg("recv");
-			delete pBuf;
+			if (bNew)
+			{
+				delete pBuf;
+			}
 			return false;
 		}
 		nRecvBytes += nRet;

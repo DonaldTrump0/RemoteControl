@@ -20,7 +20,6 @@ protected:
 public:
 	DWORD m_dwTargetIp;
 	SOCKET m_clientSocket;
-	BOOL m_bInitSuccess;
 	CString m_strCurLocalPath;
 	CString m_strCurRemotePath;
 	CListCtrl m_localFileList;
@@ -35,7 +34,6 @@ public:
 
 	virtual BOOL OnInitDialog();
 	afx_msg void OnDblclkListLocalFile(NMHDR* pNMHDR, LRESULT* pResult);
-	virtual void OnFinalRelease();
 	afx_msg void OnDblclkListRemoteFile(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnUpload();
 	afx_msg void OnRclickListLocalFile(NMHDR* pNMHDR, LRESULT* pResult);

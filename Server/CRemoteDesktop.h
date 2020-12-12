@@ -1,6 +1,9 @@
 #pragma once
 #include <Windows.h>
 
+// ×ÀÃæÍ¼Æ¬´«Êä¼ä¸ô
+#define INTERVAL_TIME 100
+
 class CRemoteDesktop
 {
 public:

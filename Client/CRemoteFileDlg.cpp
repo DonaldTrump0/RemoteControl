@@ -14,23 +14,6 @@ CRemoteFileDlg::CRemoteFileDlg(DWORD dwTargetIp, CWnd* pParent /*=nullptr*/)
 	, m_localPathEdit(TRUE)
 	, m_remotePathEdit(FALSE)
 {
-	m_bInitSuccess = TRUE;
-
-	m_clientSocket = ConnectTargetHost(m_dwTargetIp);
-	if (INVALID_SOCKET == m_clientSocket)
-	{
-		m_bInitSuccess = FALSE;
-		return;
-	}
-
-	// 请求远程文件
-	int nCmd = REMOTE_FILE;
-	if (SOCKET_ERROR == send(m_clientSocket, (char*)&nCmd, sizeof(nCmd), 0))
-	{
-		m_bInitSuccess = FALSE;
-		PrintErrMsg("send");
-		return;
-	}
 }
 
 CRemoteFileDlg::~CRemoteFileDlg()
@@ -165,6 +148,22 @@ BOOL CRemoteFileDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
 
+	m_clientSocket = ConnectTargetHost(m_dwTargetIp);
+	if (INVALID_SOCKET == m_clientSocket)
+	{
+		EndDialog(-1);
+		return TRUE;
+	}
+
+	// 请求远程文件
+	int nCmd = REMOTE_FILE;
+	if (SOCKET_ERROR == send(m_clientSocket, (char*)&nCmd, sizeof(nCmd), 0))
+	{
+		PrintErrMsg("send");
+		EndDialog(-1);
+		return TRUE;
+	}
+
 	// 加载菜单资源
 	m_menu.LoadMenu(IDR_MENU);
 
@@ -211,14 +210,6 @@ void CRemoteFileDlg::OnDblclkListLocalFile(NMHDR* pNMHDR, LRESULT* pResult)
 		// 同步到edit控件
 		m_localPathEdit.SetWindowText(m_strCurLocalPath);
 	}
-}
-
-
-void CRemoteFileDlg::OnFinalRelease()
-{
-	CDialogEx::OnFinalRelease();
-
-	delete this;
 }
 
 // 双击打开远程文件

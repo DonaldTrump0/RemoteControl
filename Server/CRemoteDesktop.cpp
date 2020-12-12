@@ -54,6 +54,7 @@ DWORD WINAPI CRemoteDesktop::DesktopThreadProc(LPVOID lpParam)
         return 0;
     }
 
+    // ¥¥Ω®ºÊ»›DC
     HDC hdcDesktop = GetDC(NULL);
     HDC hdcMemDC = CreateCompatibleDC(hdcDesktop);
     HBITMAP hBitmap = CreateCompatibleBitmap(hdcDesktop, nWidth, nHeight);
@@ -61,7 +62,7 @@ DWORD WINAPI CRemoteDesktop::DesktopThreadProc(LPVOID lpParam)
 
     int nNumberOfBytes = nWidth * nHeight * sizeof(COLORREF);
     char* pBytes = new char[nNumberOfBytes];
-    char* pCompressedData = new char[nNumberOfBytes / 10];
+    char* pCompressedData = new char[nNumberOfBytes];
     unique_ptr<char> upBytes(pBytes);
     unique_ptr<char> upCompressedData(pCompressedData);
 
@@ -84,7 +85,7 @@ DWORD WINAPI CRemoteDesktop::DesktopThreadProc(LPVOID lpParam)
             return 0;
         }
 
-        Sleep(100);
+        Sleep(INTERVAL_TIME);
     }
 
     return 0;
